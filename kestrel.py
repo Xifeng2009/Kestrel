@@ -1,6 +1,6 @@
+#!/usr/bin/env python3
 # KESTREL: A FAST VULNABILITY SCANNER
 # Copyrights...
-#!/usr/bin/env python3
 import requests, re, random, time, string, os, sys, argparse, copy
 from colorama import init, Fore, Back, Style
 init()
@@ -251,3 +251,5 @@ for url in urls:
     # random_agent = args.random_agent
     kestrel  = Kestrel(params)
     kestrel.start()
+
+input()
