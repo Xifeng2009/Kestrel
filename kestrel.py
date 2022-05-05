@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 # KESTREL: A FAST VULNABILITY SCANNER
 # Copyrights...
 import requests, re, random, time, string, os, sys, argparse, copy
@@ -16,6 +16,7 @@ TIME_BASED_RCE  = ["||ping -c 10 127.0.0.1||",]
 SSTI = [i % (R, R) for i in ('${%d*%d}', '{{%d*%d}}', '{{%d*\'%d\'}}',)]
 ALL_1 = ['ERROR_BASED_SQL', 'BOOLEAN_BASED_SQL', 'TIME_BASED_SQL', 'ERROR_BASED_RCE', 'TIME_BASED_RCE']
 ALL_2 = ('ERROR_BASED_RCE', 'TIME_BASED_RCE', ) # TEST
+ALL = ALL_2 if args.test else ALL_1
 INJECT, NOSCAN = 'INJECT', 'NOSCAN' # todo://add noscan(√)
 
 SQL_ERROR_BASED_ERRORS = {
@@ -219,13 +220,13 @@ def parser():
     parser.add_argument('-t', '--threads', default=1, type=int, help='THREADS') # todo://
     parser.add_argument('-o', '--output', type=str, help='OUTPUT FILE')
     parser.add_argument('--debug', action='store_true', help='DEBUG MODE')
+    parser.add_argument('--test', action='store_true', help='TEST MODE')
     parser.add_argument('-h', '--help', action='store_true', help='PRINT THIS')
-
     return parser
 
 ap = parser()
 args = ap.parse_args()
-if args.help or not args.url:
+if args.help:
     ap.print_help()
     sys.exit(0)
 
@@ -237,7 +238,6 @@ elif args.bulkfile:
         for line in f.readlines():
             urls.append(line.strip('\r').strip('\n'))
 
-ALL = ALL_2 if args.debug else ALL_1
 for url in urls:
     params = {}
     params['url']     = url
