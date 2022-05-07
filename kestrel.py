@@ -79,18 +79,10 @@ class Kestrel:
 
     def print_info(self, url, k, v, msg):
         self.lock.acquire()
-        print(f"[+] Type:      {Fore.RED + msg}")
-        print(Style.RESET_ALL, end='')
-        print(f"[+] Parameter: {Fore.GREEN + k}")
-        print(Style.RESET_ALL, end='')
-        print(f"[+] Payload:   {Fore.GREEN + v}")
-        print(Style.RESET_ALL, end='')
+        print(f"[+] {Fore.RED+msg+Style.RESET_ALL}:::{Fore.GREEN+k+Style.RESET_ALL}:::{Fore.GREEN+v+Style.RESET_ALL}")
         if output:
             with open(output, 'a') as f:
-                f.write(f"[+] URL:       {url}\n")
-                f.write(f"[+] Type:      {msg}\n")
-                f.write(f"[+] Parameter: {k}\n")
-                f.write(f"[+] Payload:   {v}\n")
+                f.write(f"{url}:::{msg}:::{k}:::{v}\n")
         self.lock.release()
 
     def build_session(self):
