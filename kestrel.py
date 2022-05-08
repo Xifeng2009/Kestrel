@@ -71,11 +71,11 @@ class Kestrel:
         self.vulnerable = False
 
     @staticmethod
-    def print_ok():
+    def print_ok(msg=''):
         for i in range(3):
             time.sleep(0.1)
             print('.', end='')
-        print("OK")
+        print("OK" if not msg else msg)
 
     def print_info(self, url, k, v, msg):
         self.lock.acquire()
@@ -100,6 +100,19 @@ class Kestrel:
         print("[*] Building Semaphore", end='')
         self.sem  = Semaphore(threads)
         self.print_ok()
+
+    def is_host_alive(self, url):
+        print("[*] Testing Host Alive", end='')
+        url = re.match(r'(?P<base>https?://[a-zA-Z0-9-.]*)', url).group('base')
+        try:
+            r = self.s.get(url, timeout=30)
+            self.print_ok(msg=r.status_code)
+            return True if r.status_code != 200 else False
+        except requests.exceptions.ReadTimeout:
+            self.print_ok(msg='False')
+            return False
+        except KeyboardInterrupt:
+            self.print_ok(msg='CTRL-C')
 
     def find_param_from_url_or_data(self, url_or_data):
         data = []
@@ -215,6 +228,8 @@ class Kestrel:
         self.build_threading_lock()
         for url in urls:
             print(f"[*] Testing {url}")
+            if not self.is_host_alive(url):
+                continue
             ur_ = url.split('?')[0]
             self.vulnerable = False
             url_or_data = url if not is_post else data
@@ -270,7 +285,4 @@ scan_types = args.scan if args.scan else SCAN_TYPES
 threads = args.threads
 output  = args.output
 
-
 Kestrel(args.cookies, args.headers, proxies).start()
-
-
