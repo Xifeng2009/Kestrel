@@ -7,8 +7,10 @@ kestrel -m <filename>
 kestrel -u <url>
 #2. POST
 kestrel -u <url> -d/--data <data>
-#3. Cookie inject
-kestrel -u <url> -c "session=whatthefuckINJECT"
+#3. POST JSON
+kestrel -u <url> -j/--json <json>
+#4. Cookie inject
+kestrel -u <url> -c "session=whatthefuck"
 '''
 import sys, requests, time, re, random, string, copy, argparse, json
 from threading import Thread, Lock, Semaphore
@@ -45,7 +47,7 @@ SQL_ERROR_BASED_ERRORS = {
 
 def parser():
     parser = argparse.ArgumentParser(prog='Kestrel', conflict_handler='resolve')
-    parser.add_argument('-u', '--url', type=str, help='REQUEST URL, INSERT KEYWORD <INJECT> FOR TEST (e.g. -u http://target.com/?id=INJECT&cid=INJECT')
+    parser.add_argument('-u', '--url', type=str, help='REQUEST URL')
     parser.add_argument('-m', '--bulkfile', type=str, help='SCAN MULTIPLE TARGETS GIVEN IN A TEXTUAL FILE') # starts with http:// or https://
     # 首先检查url header cookie中是否存在关键字INJECT, 如不存在,进行常规测试, 如存在,进行指定测试
     parser.add_argument('-d', '--data', type=str, default='', help='POST DATA')
@@ -53,13 +55,11 @@ def parser():
     parser.add_argument('--headers', type=str, default='', help='REQUEST HEADERS (e.g. User-Agent: _______\nReferer: ________')
     parser.add_argument('--cookies', type=str, default='', help='REQUEST COOKIES')
     parser.add_argument('-p', '--proxies', type=str, help='PROXY SERVER (e.g. http://127.0.0.1:8080')
-    parser.add_argument('-s', '--scan', choices=('sql','rce','xss', 'ssti', 'redirect',), type=str, help='SCAN')
+    parser.add_argument('-s', '--scan', default='', type=str, help='SCAN TYPE')
     # parser.add_argument('--random-agent', action='store_true', help='ENABLE RANDOM AGENT')
     # parser.add_argument('-v', '--verbose', action='store_true', help='VERBOSE')
     parser.add_argument('-t', '--threads', default=10, type=int, help='THREADS')
     parser.add_argument('-o', '--output', type=str, help='OUTPUT FILE')
-    parser.add_argument('--debug', action='store_true', help='DEBUG MODE')
-    parser.add_argument('--test', action='store_true', help='TEST MODE')
     parser.add_argument('-h', '--help', action='store_true', help='PRINT THIS')
     return parser
 
@@ -284,6 +284,7 @@ ap = parser()
 args = ap.parse_args()
 if args.help:
     ap.print_help()
+    print(USAGE)
     sys.exit(0)
 
 urls = [args.url] if args.url else []
