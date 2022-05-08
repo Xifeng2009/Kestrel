@@ -10,7 +10,7 @@ kestrel -u <url> -d/--data <data>
 #3. Cookie inject
 kestrel -u <url> -c "session=whatthefuckINJECT"
 '''
-import sys, requests, time, re, random, string, copy, argparse
+import sys, requests, time, re, random, string, copy, argparse, json
 from threading import Thread, Lock, Semaphore
 from colorama import init, Fore, Back, Style
 init()
@@ -49,6 +49,7 @@ def parser():
     parser.add_argument('-m', '--bulkfile', type=str, help='SCAN MULTIPLE TARGETS GIVEN IN A TEXTUAL FILE') # starts with http:// or https://
     # 首先检查url header cookie中是否存在关键字INJECT, 如不存在,进行常规测试, 如存在,进行指定测试
     parser.add_argument('-d', '--data', type=str, default='', help='POST DATA')
+    parser.add_argument('-j', '--json', type=str, default='', help='POST JSON')
     parser.add_argument('--headers', type=str, default='', help='REQUEST HEADERS (e.g. User-Agent: _______\nReferer: ________')
     parser.add_argument('--cookies', type=str, default='', help='REQUEST COOKIES')
     parser.add_argument('-p', '--proxies', type=str, help='PROXY SERVER (e.g. http://127.0.0.1:8080')
@@ -79,10 +80,10 @@ class Kestrel:
 
     def print_info(self, url, k, v, msg):
         self.lock.acquire()
-        print(f"[+] {Fore.RED+msg+Style.RESET_ALL}:::{Fore.GREEN+k+Style.RESET_ALL}:::{Fore.GREEN+v+Style.RESET_ALL}")
+        print(f"[+] :::{Fore.RED+msg+Style.RESET_ALL}:::{Fore.GREEN+k+Style.RESET_ALL}:::{Fore.GREEN+v+Style.RESET_ALL}:::")
         if output:
             with open(output, 'a') as f:
-                f.write(f"{url}:::{msg}:::{k}:::{v}\n")
+                f.write(f":::{url}:::{msg}:::{k}:::{v}:::\n")
         self.lock.release()
 
     def build_session(self):
@@ -107,19 +108,24 @@ class Kestrel:
         try:
             r = self.s.get(url, timeout=30)
             self.print_ok(msg=r.status_code)
-            return True if r.status_code != 200 else False
+            return False if r.status_code != 200 else True
         except requests.exceptions.ReadTimeout:
             self.print_ok(msg='False')
             return False
         except KeyboardInterrupt:
             self.print_ok(msg='CTRL-C')
 
-    def find_param_from_url_or_data(self, url_or_data):
+    def find_param_from_url_or_data(self, url_or_data, json=None):
         data = []
         self.param_base = {}
-        for match in re.finditer(r"((\A|[?&])(?P<parameter>[^_]\w*)=)(?P<value>[^&#]+)", url_or_data):
-            data.append(('url', match.group('parameter'), match.group('value')))
-            self.param_base[match.group('parameter')] = match.group('value')
+        if not json:
+            for match in re.finditer(r"((\A|[?&])(?P<parameter>[^_]\w*)=)(?P<value>[^&#]+)", url_or_data):
+                data.append(('url', match.group('parameter'), match.group('value')))
+                self.param_base[match.group('parameter')] = match.group('value')
+        else:
+            for k, v in json.items():
+                data.append(('url', k, v))
+                self.param_base[k] = v
         if self.cookies:
             for k, v in self.cookies.items():
                 data.append(('cki', k, v))
@@ -129,14 +135,21 @@ class Kestrel:
         return data
 
     def get_or_post(self, url, params={}, cookies={}, headers={}):
-        _params = copy.deepcopy(self.param_base)
-        _params.update(params)
+        data = copy.deepcopy(self.param_base)
+        data.update(params)
         try:
             if cookies:
                 self.s.cookies.update(cookies)
             if headers:
                 self.s.headers.update(headers)
-            r = self.s.get(url, params=_params) if not is_post else self.s.post(url, data=_params)
+            r = self.s.get(url, params=data) if not is_post else self.s.post(url, json=data) if jata else self.s.post(url, data=data)
+            # if is_post:
+            #     if jata:
+            #         r = self.s.post(url, json=data)
+            #     else:
+            #         r = self.s.post(url, data=data)
+            # else:
+            #     r = self.s.get(url, params=data)
             # reset
             self.s.cookies.update(self.cookies)
             self.s.headers.update(self.headers)
@@ -233,7 +246,7 @@ class Kestrel:
             ur_ = url.split('?')[0]
             self.vulnerable = False
             url_or_data = url if not is_post else data
-            for pos, param, value in self.find_param_from_url_or_data(url_or_data):
+            for pos, param, value in self.find_param_from_url_or_data(url_or_data, json=jata):
                 if self.vulnerable: break
                 for i in scan_types:
                     typE, payloads = i, eval(i)
@@ -278,7 +291,8 @@ if args.bulkfile:
     with open(args.bulkfile, 'r') as f:
         for line in f.readlines():
             urls.append(line.strip('\r').strip('\n'))
-data    = args.data
+data = args.data
+jata = json.loads(args.json) if args.json else {}
 is_post = True if data else False
 proxies = {'http': args.proxies, 'https': args.proxies}
 scan_types = args.scan if args.scan else SCAN_TYPES
