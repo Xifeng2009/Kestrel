@@ -1,0 +1,36 @@
+需求:
+-u
+通过-d决定对GET/POST进行测试
+接受-j进行json测试
+接受-b <filename> 对文件列表进行GET测试
+接受-r 请求文本输入
+接受-m <GET|POST|PUT|DELETE|PATCH|OPTION>
+    接受-l 读取burp日志
+接受-c/--cookies
+接受-H/--headers
+接受-s/--skip <param1,p2,p3> 跳过参数名
+接受-p <p1> 测试指定参数
+接受-x/--proxy <http://...>
+接受--tech <sqli|rce|ssti|xss|...> 进行专项测试
+接受--rate-test 此选项被优先测试 返回status询问用户是否继续
+接受-v <1|2|3>详细输出
+接受-h 打印help
+接受-o 输出信息
+    接受 | 链式输入
+接受-t 多线程模式(默认10)
+接受--nonstop 否则成功后中断
+接受--random-agent
+自动测试每一个参数
+
+
+===================================
+1. 处理-u/-b
+2. 处理-d/-j -c/-H
+3. 决定请求方法
+r = requests.get(url, data, headers, cookies, proxies)
+
+1. 解析-r
+
+1. 替换参数 狙击/鱼叉/集束炸弹
+2. 发动请求
+3. 比对请求结果

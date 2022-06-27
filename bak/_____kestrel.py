@@ -23,15 +23,9 @@ BOOLEAN_BASED_SQL = [{True: i % (R, R), False: i % (R, R-1)} for i in ("' AND %d
 TIME_BASED_SQL  = ("' AND (SELECT sleep(10))-- -", "' AND (SELECT sleep(10))#", "' ||pg_sleep(10)-- -", "' ||pg_sleep(10)#", ' AND (SELECT sleep(10))-- -', ' AND (SELECT sleep(10))#', ' ||pg_sleep(10)-- -', ' ||pg_sleep(10)#', '" AND (SELECT sleep(10))-- -', '" AND (SELECT sleep(10))#', '" ||pg_sleep(10)-- -', '" ||pg_sleep(10)#', ') AND (SELECT sleep(10))-- -', ') AND (SELECT sleep(10))#', ') ||pg_sleep(10)-- -', ') ||pg_sleep(10)#', "') AND (SELECT sleep(10))-- -", "') AND (SELECT sleep(10))#", "') ||pg_sleep(10)-- -", "') ||pg_sleep(10)#", '") AND (SELECT sleep(10))-- -', '") AND (SELECT sleep(10))#', '") ||pg_sleep(10)-- -', '") ||pg_sleep(10)#')
 ERROR_BASED_RCE = [i % (R, R) for i in (';expr %d + %d', ';%d + %d', '&&expr %d + %d', '&&%d + %d', '|expr %d + %d', '|%d + %d', '||expr %d + %d', '||%d + %d', '`expr %d + %d`', '`%d + %d`', '$((expr %d + %d))', '$((%d + %d))', )]
 ERROR_BASED_RCE+= [i % (R, R) for i in (';eval("%d+%d")', '&&eval("%d+%d")', '||eval("%d+%d")', '|eval("%d+%d")', )]
-TIME_BASED_RCE  = ["||sleep 10||",]
+TIME_BASED_RCE  = ["||sleep 10||", "||ping -c 10 127.0.0.1||"]
 SSTI = [i % (R, R) for i in ('${%d*%d}', '{{%d*%d}}', '{{%d*\'%d\'}}', '<%%= %d*%d %%>')]
 SCAN_TYPES = ['ERROR_BASED_SQL', 'BOOLEAN_BASED_SQL', 'TIME_BASED_SQL', 'ERROR_BASED_RCE', 'TIME_BASED_RCE', 'SSTI']
-# INJECT, NOSCAN = 'INJECT', 'NOSCAN'
-
-# BOOLEAN_BASED_SQL = [] # TEST
-# TIME_BASED_SQL  = [] # TEST
-# ERROR_BASED_RCE = [] # TEST
-# TIME_BASED_RCE  = [] # TEST
 
 SQL_ERROR_BASED_ERRORS = {
     "Python":               (r"Internal Server Error",),
@@ -56,6 +50,7 @@ def parser():
     parser.add_argument('--cookies', type=str, default='', help='REQUEST COOKIES')
     parser.add_argument('-p', '--proxies', type=str, help='PROXY SERVER (e.g. http://127.0.0.1:8080')
     parser.add_argument('-s', '--scan', default='', type=str, help='SCAN TYPE')
+    parser.add_argument('--nonstop', action='store_true', help='SCAN UNTIL THE END')
     # parser.add_argument('--random-agent', action='store_true', help='ENABLE RANDOM AGENT')
     # parser.add_argument('-v', '--verbose', action='store_true', help='VERBOSE')
     parser.add_argument('-t', '--threads', default=10, type=int, help='THREADS')
@@ -254,7 +249,7 @@ class Kestrel:
                     ts = []
                     with self.sem:
                         for payload in payloads:
-                            if self.vulnerable: break
+                            if self.vulnerable and nonstop == False: break
                             if typE == 'ERROR_BASED_SQL':
                                 t = Thread(target=self.scan_error_based_sql, args=(ur_, pos, param, value, payload))
                                 ts.append(t)
@@ -299,5 +294,6 @@ proxies = {'http': args.proxies, 'https': args.proxies}
 scan_types = args.scan if args.scan else SCAN_TYPES
 threads = args.threads
 output  = args.output
+nonstop = args.nonstop
 
 Kestrel(args.cookies, args.headers, proxies).start()
